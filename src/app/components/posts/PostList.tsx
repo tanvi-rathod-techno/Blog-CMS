@@ -1,13 +1,29 @@
 'use client';
+
 import { useInfiniteQuery } from '@tanstack/react-query';
-import { useRef, useEffect, useMemo } from 'react';
+import { useRef, useEffect, useMemo, useState } from 'react';
 import PostCard from '@/app/components/posts/PostCard';
-import { fetchPosts } from '../../lib/api/postStore';
+import { fetchPosts, Post } from '../../lib/api/postStore';
 
 const PAGE_SIZE = 12;
-const TOTAL_POSTS = 100;
 
 export default function PostsList() {
+  const [totalPosts, setTotalPosts] = useState<number | null>(null);
+  const [localPosts, setLocalPosts] = useState<Post[]>([]);
+
+  // Load localStorage posts only once on mount
+  useEffect(() => {
+    const stored = localStorage.getItem('localPosts');
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        setLocalPosts(parsed);
+      } catch {
+        setLocalPosts([]);
+      }
+    }
+  }, []);
+
   const {
     data,
     isLoading,
@@ -17,25 +33,36 @@ export default function PostsList() {
     isFetchingNextPage,
   } = useInfiniteQuery({
     queryKey: ['posts'],
-    queryFn: ({ pageParam = 1 }) => fetchPosts(pageParam),
+    queryFn: async ({ pageParam = 1 }) => {
+      const res = await fetchPosts(pageParam, PAGE_SIZE);
+      if (totalPosts === null) setTotalPosts(res.totalCount);
+      return res.posts;
+    },
     initialPageParam: 1,
     getNextPageParam: (_, pages) =>
-      pages.length * PAGE_SIZE < TOTAL_POSTS
+      totalPosts !== null && pages.flat().length < totalPosts
         ? pages.length + 1
         : undefined,
   });
 
-  const posts = useMemo(() => data?.pages.flat() ?? [], [data]);
+  // Combine localStorage posts + API posts
+  const posts = useMemo(() => {
+    const apiPosts = data?.pages.flat() ?? [];
+    const all = [...localPosts, ...apiPosts];
+
+    return all.sort((a, b) => {
+      const dateA = new Date(a.createdAt ?? '').getTime();
+      const dateB = new Date(b.createdAt ?? '').getTime();
+      return dateB - dateA || b.id - a.id;
+    });
+  }, [data, localPosts]);
 
   const loadMoreRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     const observer = new IntersectionObserver(
       entries => {
-        if (
-          entries[0].isIntersecting &&
-          hasNextPage &&
-          !isFetchingNextPage
-        ) {
+        if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
           fetchNextPage();
         }
       },
