@@ -1,92 +1,112 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
-import { useState } from 'react';
+import { createComment, fetchCommentsByPostId } from '@/app/lib/api/postStore';
 
-type Comment = {
-  id: number;
-  name: string;
-  email: string;
-  body: string;
+type Props = {
+  postId: number;
 };
 
-export default function CommentsSection({ postId }: { postId: string }) {
-  const { data = [], isLoading, isError } = useQuery<Comment[]>({
+export default function CommentSection({ postId }: Props) {
+  const queryClient = useQueryClient();
+
+  const { data, isLoading, isError } = useQuery({
     queryKey: ['comments', postId],
-    queryFn: async () => {
-      const res = await fetch(`https://jsonplaceholder.typicode.com/comments?postId=${postId}`);
-      if (!res.ok) throw new Error('Error fetching comments');
-      return res.json();
+    queryFn: () => fetchCommentsByPostId(postId),
+  });
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<{ name: string; email: string; body: string }>();
+
+  const mutation = useMutation({
+    mutationFn: (commentData) => createComment(postId, commentData),
+    onSuccess: (newComment) => {
+      queryClient.setQueryData(['comments', postId], (old: any = []) => [
+        newComment,
+        ...old,
+      ]);
+      reset();
     },
   });
 
-  const { register, handleSubmit, reset } = useForm();
-  const [newComment, setNewComment] = useState<Comment | null>(null);
-
-  const onSubmit = (data: any) => {
-    const fakeComment = {
-      id: Date.now(),
-      postId: +postId,
-      name: data.name,
-      email: data.email,
-      body: data.body,
-    };
-    setNewComment(fakeComment);
-    reset();
-  };
+  const onSubmit = handleSubmit((data) => {
+    mutation.mutate(data);
+  });
 
   return (
-    <div>
-      <h2 className="text-xl font-semibold mb-4">Comments</h2>
+    <section className="mt-12">
+      <h2 className="text-xl font-bold mb-6 text-blue-900">Comments</h2>
 
-      {isLoading && <p className="text-gray-500">Loading comments...</p>}
-      {isError && <p className="text-red-500">Error loading comments.</p>}
+      {isLoading && <p className="text-gray-500 italic">Loading comments...</p>}
+      {isError && <p className="text-red-500">Failed to load comments.</p>}
 
-      <ul className="space-y-4 mb-6">
-        {data.map((comment) => (
-          <li key={comment.id} className="border p-4 rounded-md">
-            <p className="font-semibold">{comment.name}</p>
-            <p className="text-sm text-gray-600">{comment.email}</p>
-            <p className="mt-2">{comment.body}</p>
+      <ul className="space-y-6 mb-10">
+        {(data || []).map((comment) => (
+          <li key={comment.id} className="bg-white p-4 rounded-xl shadow border">
+            <div className="flex justify-between items-center mb-1">
+              <h4 className="text-md font-semibold text-gray-800">{comment.name}</h4>
+              <span className="text-sm text-gray-500 italic">{comment.email}</span>
+            </div>
+            <p className="text-gray-700">{comment.body}</p>
           </li>
         ))}
-        {newComment && (
-          <li className="border p-4 rounded-md bg-green-50">
-            <p className="font-semibold">{newComment.name}</p>
-            <p className="text-sm text-gray-600">{newComment.email}</p>
-            <p className="mt-2">{newComment.body}</p>
-          </li>
-        )}
       </ul>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <form
+        onSubmit={onSubmit}
+        className="space-y-5 bg-gray-50 p-6 rounded-xl border shadow"
+      >
+        <h3 className="text-xl font-semibold text-blue-900 mb-2">Add a Comment</h3>
+
         <div>
           <input
-            {...register('name', { required: true })}
+            {...register('name', { required: 'Name is required' })}
             placeholder="Your name"
-            className="w-full border rounded p-2"
+            className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
           />
+          {errors.name && (
+            <p className="text-red-500 text-sm mt-1">{errors.name.message}</p>
+          )}
         </div>
+
         <div>
           <input
-            {...register('email', { required: true })}
             type="email"
+            {...register('email', { required: 'Email is required' })}
             placeholder="Your email"
-            className="w-full border rounded p-2"
+            className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
           />
+          {errors.email && (
+            <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>
+          )}
         </div>
+
         <div>
           <textarea
-            {...register('body', { required: true })}
-            placeholder="Your comment"
-            className="w-full border rounded p-2 h-24"
+            {...register('body', { required: 'Comment is required' })}
+            placeholder="Write your comment here..."
+            className="w-full px-4 py-2 border rounded min-h-[100px] focus:outline-none focus:ring-2 focus:ring-blue-400"
           />
+          {errors.body && (
+            <p className="text-red-500 text-sm mt-1">{errors.body.message}</p>
+          )}
         </div>
-        <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded">
-          Submit Comment
-        </button>
+
+        <div className="flex justify-end">
+          <button
+            type="submit"
+            className="bg-blue-900 text-white px-5 py-2 rounded hover:bg-blue-700 transition"
+            disabled={mutation.isPending}
+          >
+            {mutation.isPending ? 'Posting...' : 'Post Comment'}
+          </button>
+        </div>
       </form>
-    </div>
+    </section>
   );
 }

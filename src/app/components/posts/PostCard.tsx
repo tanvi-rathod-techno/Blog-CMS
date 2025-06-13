@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { Eye } from 'lucide-react';
 
 type Post = {
   id: number;
@@ -22,6 +23,11 @@ export default function PostCard({ post }: { post: Post }) {
             {post.title}
           </h2>
           <p className="text-sm text-gray-600 line-clamp-3">{post.body}</p>
+           {/* View Details button with Eye icon */}
+           <div className="pt-2 mt-auto flex justify-end items-center text-blue-600 hover:text-blue-800 transition">
+            <span className="text-sm font-medium mr-1"></span>
+            <Eye className="w-5 h-5" />
+          </div>
         </div>
       </div>
     </Link>
