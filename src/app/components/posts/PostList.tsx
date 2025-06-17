@@ -1,7 +1,8 @@
 'use client';
 
 import { useInfiniteQuery } from '@tanstack/react-query';
-import { useRef, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import InfiniteScroll from 'react-infinite-scroll-component';
 import PostCard from '@/app/components/posts/PostCard';
 import { fetchPosts, Post } from '../../lib/api/postStore';
 
@@ -11,7 +12,6 @@ export default function PostsList() {
   const [totalPosts, setTotalPosts] = useState<number | null>(null);
   const [localPosts, setLocalPosts] = useState<Post[]>([]);
 
-  // Load localStorage posts only once on mount
   useEffect(() => {
     const stored = localStorage.getItem('localPosts');
     if (stored) {
@@ -30,7 +30,6 @@ export default function PostsList() {
     isError,
     fetchNextPage,
     hasNextPage,
-    isFetchingNextPage,
   } = useInfiniteQuery({
     queryKey: ['posts'],
     queryFn: async ({ pageParam = 1 }) => {
@@ -45,7 +44,6 @@ export default function PostsList() {
         : undefined,
   });
 
-  // Combine localStorage posts + API posts
   const posts = useMemo(() => {
     const apiPosts = data?.pages.flat() ?? [];
     const all = [...localPosts, ...apiPosts];
@@ -56,23 +54,6 @@ export default function PostsList() {
       return dateB - dateA || b.id - a.id;
     });
   }, [data, localPosts]);
-
-  const loadMoreRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      entries => {
-        if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
-          fetchNextPage();
-        }
-      },
-      { rootMargin: '200px' }
-    );
-    if (loadMoreRef.current) observer.observe(loadMoreRef.current);
-    return () => {
-      if (loadMoreRef.current) observer.unobserve(loadMoreRef.current);
-    };
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   if (isLoading)
     return <div className="text-center py-8">Loading posts...</div>;
@@ -85,20 +66,23 @@ export default function PostsList() {
 
   return (
     <div className="w-full max-w-8xl mx-auto px-4 py-8">
-      <div className="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        {posts.map(post => (
-          <PostCard key={post.id} post={post} />
-        ))}
-      </div>
-      <div ref={loadMoreRef} className="h-px" />
-      {isFetchingNextPage && (
-        <p className="text-center py-4 text-gray-500">
-          Loading more posts...
-        </p>
-      )}
-      {!hasNextPage && (
-        <p className="text-center py-4 text-gray-500">No more posts</p>
-      )}
+      <InfiniteScroll
+        dataLength={posts.length}
+        next={fetchNextPage}
+        hasMore={!!hasNextPage}
+        loader={
+          <p className="text-center py-4 text-gray-500">Loading more posts...</p>
+        }
+        endMessage={
+          <p className="text-center py-4 text-gray-500">No more posts</p>
+        }
+      >
+        <div className="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          {posts.map(post => (
+            <PostCard key={post.id} post={post} />
+          ))}
+        </div>
+      </InfiniteScroll>
     </div>
   );
 }

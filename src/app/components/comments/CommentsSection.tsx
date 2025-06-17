@@ -3,6 +3,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { createComment, fetchCommentsByPostId } from '@/app/lib/api/postStore';
+import type { Comment, CreateCommentInput } from '@/app/lib/api/postStore';
+
 
 type Props = {
   postId: number;
@@ -23,16 +25,17 @@ export default function CommentSection({ postId }: Props) {
     formState: { errors },
   } = useForm<{ name: string; email: string; body: string }>();
 
-  const mutation = useMutation({
+  const mutation = useMutation<Comment, Error, CreateCommentInput>({
     mutationFn: (commentData) => createComment(postId, commentData),
     onSuccess: (newComment) => {
-      queryClient.setQueryData(['comments', postId], (old: any = []) => [
+      queryClient.setQueryData<Comment[]>(['comments', postId], (old = []) => [
         newComment,
         ...old,
       ]);
       reset();
     },
   });
+  
 
   const onSubmit = handleSubmit((data) => {
     mutation.mutate(data);

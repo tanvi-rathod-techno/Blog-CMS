@@ -5,7 +5,8 @@ export default function AboutPage() {
         <div className="bg-white shadow-md rounded-xl p-8">
           <h1 className="text-3xl font-bold mb-6 text-center text-blue-900">About</h1>
           <p className="text-lg mb-8">
-            Welcome to <strong>NextBlog</strong>! This blog is a space where I share insights on web development and also document my favorite travel destinations across India. Whether you're a developer, traveler, or both — I hope you find something useful or inspiring here.
+            Welcome to <strong>NextBlog</strong>! This blog is a space where I share insights on web development and also document my favorite travel destinations across India. Whether 
+            youre a developer, traveler, or both — I hope you find something useful or inspiring here.
           </p>
 
           {/* New Section: Visiting Places */}
@@ -16,7 +17,7 @@ export default function AboutPage() {
                 <strong>Mount Abu (Rajasthan)</strong> – A peaceful hill station known for the Dilwara Temples, Nakki Lake, and cool weather.
               </li>
               <li>
-                <strong>Udaipur (Rajasthan)</strong> – Called the "City of Lakes", famous for palaces, markets, and beautiful sunsets.
+                <strong>Udaipur (Rajasthan)</strong> – Called the City of Lakes, famous for palaces, markets, and beautiful sunsets.
               </li>
               <li>
                 <strong>Goa</strong> – A vibrant coastal state with beautiful beaches, Portuguese architecture, and nightlife.
@@ -34,7 +35,7 @@ export default function AboutPage() {
                 <strong>Munnar (Kerala)</strong> – Rolling hills with tea gardens, waterfalls, and a refreshing cool climate.
               </li>
               <li>
-                <strong>Coorg (Karnataka)</strong> – Also known as the "Scotland of India", famous for coffee estates and forest treks.
+                <strong>Coorg (Karnataka)</strong> – Also known as the Scotland of India, famous for coffee estates and forest treks.
               </li>
               <li>
                 <strong>Varanasi (Uttar Pradesh)</strong> – One of the oldest cities in the world, known for spiritual ghats and Ganga aarti.

@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import { Eye } from 'lucide-react';
 
@@ -12,9 +13,11 @@ export default function PostCard({ post }: { post: Post }) {
     <Link href={`/posts/${post.id}`}>
       <div className="flex flex-col rounded-xl shadow-sm hover:shadow-md transition bg-white overflow-hidden min-h-[420px]">
         <div className="aspect-[3/2] w-full overflow-hidden">
-          <img
+          <Image
             src={`https://picsum.photos/seed/${post.id}/600/400`}
             alt="Post"
+            width={600}
+            height={400}
             className="w-full h-full object-cover"
           />
         </div>
@@ -23,8 +26,7 @@ export default function PostCard({ post }: { post: Post }) {
             {post.title}
           </h2>
           <p className="text-sm text-gray-600 line-clamp-3">{post.body}</p>
-           {/* View Details button with Eye icon */}
-           <div className="pt-2 mt-auto flex justify-end items-center text-blue-600 hover:text-blue-800 transition">
+          <div className="pt-2 mt-auto flex justify-end items-center text-blue-600 hover:text-blue-800 transition">
             <span className="text-sm font-medium mr-1"></span>
             <Eye className="w-5 h-5" />
           </div>

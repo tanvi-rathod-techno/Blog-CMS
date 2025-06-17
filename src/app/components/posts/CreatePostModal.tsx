@@ -34,15 +34,18 @@ export default function CreatePostModal({ onClose }: CreatePostModalProps) {
 
   const onSubmit = async (data: PostFormData) => {
     try {
-      const newPost = await createPost(data);
+      const newPost = await createPost({ ...data, userId: 1 });
 
-      queryClient.setQueryData(['posts'], (oldData: any) => {
+
+      queryClient.setQueryData(['posts'], (oldData: { pages: PostFormData[][] } | undefined) => {
         if (!oldData) return oldData;
+      
         return {
           ...oldData,
           pages: [[newPost, ...oldData.pages[0]], ...oldData.pages.slice(1)],
         };
       });
+      
 
       reset();
       setMessage({ type: 'success', text: 'Post created successfully!' });
@@ -50,7 +53,7 @@ export default function CreatePostModal({ onClose }: CreatePostModalProps) {
         setMessage(null);
         onClose(); // Optional: Close modal after success
       }, 1500);
-    } catch (err) {
+    } catch {
       setMessage({ type: 'error', text: 'Failed to create post. Try again.' });
     }
   };

@@ -1,4 +1,7 @@
+// lib/api.ts
 import axios from 'axios';
+
+const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL!;
 
 export interface Post {
   userId: number;
@@ -16,42 +19,30 @@ export interface Comment {
   body: string;
 }
 
-interface FetchPostsResult {
+export interface FetchPostsResult {
   posts: Post[];
   totalCount: number;
 }
 
-// Fetch paginated posts
 export const fetchPosts = async (
   page: number,
   pageSize = 12
 ): Promise<FetchPostsResult> => {
-  const res = await axios.get<Post[]>('https://jsonplaceholder.typicode.com/posts', {
-    params: {
-      _page: page,
-      _limit: pageSize,
-      _sort: 'id',
-      _order: 'desc',
-    },
+  const res = await axios.get<Post[]>(`${BASE_URL}/posts`, {
+    params: { _page: page, _limit: pageSize, _sort: 'id', _order: 'desc' },
   });
-
   const totalCount = Number(res.headers['x-total-count'] || 100);
-  return {
-    posts: res.data,
-    totalCount,
-  };
+  return { posts: res.data, totalCount };
 };
 
-// Fetch single post by ID
 export async function fetchPostById(id: string): Promise<Post> {
-  const res = await fetch(`https://jsonplaceholder.typicode.com/posts/${id}`);
+  const res = await fetch(`${BASE_URL}/posts/${id}`);
   if (!res.ok) throw new Error('Post not found');
   return res.json();
 }
 
-// Create new post
 export async function createPost(data: Omit<Post, 'id'>): Promise<Post> {
-  const res = await fetch('https://jsonplaceholder.typicode.com/posts', {
+  const res = await fetch(`${BASE_URL}/posts`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ ...data, userId: 1 }),
@@ -71,46 +62,37 @@ export async function createPost(data: Omit<Post, 'id'>): Promise<Post> {
   return fakePost;
 }
 
-//Fetch comments for a post (API + localStorage)
 export async function fetchCommentsByPostId(postId: number): Promise<Comment[]> {
-  const res = await axios.get<Comment[]>(
-    `https://jsonplaceholder.typicode.com/comments`,
-    { params: { postId } }
-  );
-
-  const apiComments = res.data;
-  const localComments = getLocalComments(postId);
-
-  // Show local comments first
-  return [...localComments, ...apiComments];
+  const res = await axios.get<Comment[]>(`${BASE_URL}/comments`, {
+    params: { postId },
+  });
+  return [...getLocalComments(postId), ...res.data];
 }
 
-//  Create a new comment for a post and store it in localStorage
-export async function createComment(
+export type CreateCommentInput = Omit<Comment, 'id' | 'postId'>;
+
+export const createComment = async (
   postId: number,
-  comment: Omit<Comment, 'id' | 'postId'>
-): Promise<Comment> {
-  const res = await axios.post(`https://jsonplaceholder.typicode.com/comments`, {
-    ...comment,
-    postId,
+  commentData: CreateCommentInput
+): Promise<Comment> => {
+  const res = await fetch(`${BASE_URL}/posts/${postId}/comments`, {
+    method: 'POST',
+    body: JSON.stringify({
+      ...commentData,
+      postId,
+    }),
+    headers: {
+      'Content-Type': 'application/json',
+    },
   });
 
-  const newComment: Comment = {
-    ...res.data,
-    id: Date.now(),
-    postId,
-  };
+  if (!res.ok) {
+    throw new Error('Failed to create comment');
+  }
 
-  // Save to localStorage
-  const allLocalComments = JSON.parse(localStorage.getItem('localComments') || '{}');
-  const postComments = allLocalComments[postId] || [];
-  allLocalComments[postId] = [newComment, ...postComments];
-  localStorage.setItem('localComments', JSON.stringify(allLocalComments));
+  return res.json(); // returns a Comment
+};
 
-  return newComment;
-}
-
-// Helper: Get local comments by postId
 function getLocalComments(postId: number): Comment[] {
   try {
     const all = JSON.parse(localStorage.getItem('localComments') || '{}');
@@ -119,3 +101,4 @@ function getLocalComments(postId: number): Comment[] {
     return [];
   }
 }
+
