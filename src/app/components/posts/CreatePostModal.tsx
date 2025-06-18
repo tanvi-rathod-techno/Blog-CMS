@@ -3,6 +3,7 @@
 import { useForm } from 'react-hook-form';
 import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
+import Image from 'next/image';
 import { useQueryClient } from '@tanstack/react-query';
 import { createPost } from '@/app/lib/api/postStore';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -24,6 +25,8 @@ export default function CreatePostModal({ onClose }: CreatePostModalProps) {
 
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const queryClient = useQueryClient();
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   useEffect(() => {
     document.body.style.overflow = 'hidden';
@@ -32,29 +35,72 @@ export default function CreatePostModal({ onClose }: CreatePostModalProps) {
     };
   }, []);
 
+  useEffect(() => {
+    if (selectedImage) {
+      const objectUrl = URL.createObjectURL(selectedImage);
+      setPreviewUrl(objectUrl);
+      return () => URL.revokeObjectURL(objectUrl); // cleanup
+    }
+  }, [selectedImage]);
+  
+
   const onSubmit = async (data: PostFormData) => {
     try {
-      const newPost = await createPost({ ...data, userId: 1 });
-
-
+      let uploadedFileName: string | null = null;
+  
+      if (selectedImage) {
+        const imageFormData = new FormData();
+        imageFormData.set('file', selectedImage);
+  
+        const uploadRes = await fetch('/api/upload', {
+          method: 'POST',
+          body: imageFormData,
+        });
+  
+        const uploadJson = await uploadRes.json();
+        if (uploadJson.success) {
+          uploadedFileName = uploadJson.fileName;
+        }
+      }
+  
+      const newPost = await createPost({ ...data, userId: 1, image: uploadedFileName });
+  
+    
+      if (uploadedFileName && newPost?.id) {
+        const existingImages = JSON.parse(localStorage.getItem('postImages') || '{}');
+        existingImages[newPost.id] = uploadedFileName;
+        localStorage.setItem('postImages', JSON.stringify(existingImages));
+        console.log('Saved to localStorage:', existingImages);
+      }
+      
       queryClient.setQueryData(['posts'], (oldData: { pages: PostFormData[][] } | undefined) => {
         if (!oldData) return oldData;
-      
+  
         return {
           ...oldData,
           pages: [[newPost, ...oldData.pages[0]], ...oldData.pages.slice(1)],
         };
       });
-      
-
+  
       reset();
+      setSelectedImage(null);
+      setPreviewUrl(null);
       setMessage({ type: 'success', text: 'Post created successfully!' });
+  
       setTimeout(() => {
         setMessage(null);
-        onClose(); // Optional: Close modal after success
+        onClose();
       }, 1500);
-    } catch {
+    } catch (err) {
+      console.error(err);
       setMessage({ type: 'error', text: 'Failed to create post. Try again.' });
+    }
+  };
+  
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedImage(file);
     }
   };
 
@@ -93,6 +139,26 @@ export default function CreatePostModal({ onClose }: CreatePostModalProps) {
             />
             {errors.body && (
               <p className="text-red-500 text-sm mt-1">{errors.body.message}</p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Image Upload</label>
+            <input type ="file" placeholder="Imapge Upload"
+             onChange={handleImageChange}
+              className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+              {previewUrl && (
+              <div className="mt-3">
+                <p className="text-sm text-gray-600">Image Preview:</p>
+                <Image
+                  src={previewUrl}
+                  alt="Preview"
+                  width={600}
+                  height={400}
+                  className="mt-2 w-full h-64 object-cover rounded-md border"
+                />
+              </div>
             )}
           </div>
 

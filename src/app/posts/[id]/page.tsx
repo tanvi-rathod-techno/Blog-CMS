@@ -13,27 +13,42 @@ type Post = {
   title: string;
   body: string;
   createdAt?: string;
+  image?: string; // Optional if saved
 };
 
 export default function PostDetail() {
   const [post, setPost] = useState<Post | null>(null);
+  const [imageUrl, setImageUrl] = useState<string>(''); // hold image path
   const params = useParams();
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const id = params.id?.toString(); // use optional chaining to be safe
+        const id = params.id?.toString();
         if (!id) return notFound();
 
         const stored: Post[] = JSON.parse(localStorage.getItem('localPosts') || '[]');
         const local = stored.find(p => p.id.toString() === id);
 
+        let postToSet: Post;
+
         if (local) {
-          setPost(local);
+          postToSet = local;
         } else {
-          const remote = await fetchPostById(id);
-          setPost(remote);
+          postToSet = await fetchPostById(id);
         }
+
+        // Set image from localStorage if available
+        const imageMap = JSON.parse(localStorage.getItem('postImages') || '{}');
+        const localImage = imageMap[postToSet.id];
+
+        if (localImage) {
+          setImageUrl(`/${localImage}`); // from /public or file path
+        } else {
+          setImageUrl(`https://picsum.photos/seed/${postToSet.id}/600/400`);
+        }
+
+        setPost(postToSet);
       } catch {
         notFound();
       }
@@ -71,15 +86,17 @@ export default function PostDetail() {
       </p>
 
       {/* Post Image */}
-      <div className="mb-6">
-        <Image
-          src={`https://picsum.photos/seed/${post.id}/600/400`}
-          alt="Post image"
-          width={600}
-          height={400}
-          unoptimized
-        />
-      </div>
+      {imageUrl && (
+        <div className="mb-6">
+          <Image
+            src={imageUrl}
+            alt="Post image"
+            width={600}
+            height={400}
+            unoptimized
+          />
+        </div>
+      )}
 
       {/* Body */}
       <article className="prose prose-lg text-gray-800 max-w-none">
