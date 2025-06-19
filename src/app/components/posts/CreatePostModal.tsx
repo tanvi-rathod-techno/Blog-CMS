@@ -63,7 +63,7 @@ export default function CreatePostModal({ onClose }: CreatePostModalProps) {
         }
       }
   
-      const newPost = await createPost({ ...data, userId: 1, image: uploadedFileName });
+      const newPost = await createPost({ ...data, userId: 1, image: uploadedFileName ?? undefined });
   
     
       if (uploadedFileName && newPost?.id) {
@@ -106,7 +106,8 @@ export default function CreatePostModal({ onClose }: CreatePostModalProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/40 backdrop-blur-sm">
-      <div className="relative bg-white w-full max-w-2xl p-6 rounded-xl shadow-2xl animate-fadeIn">
+     <div className="relative bg-white w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 rounded-xl shadow-2xl animate-fadeIn">
+
         <button
           onClick={onClose}
           className="absolute top-4 right-4 text-gray-500 hover:text-red-500 transition"
